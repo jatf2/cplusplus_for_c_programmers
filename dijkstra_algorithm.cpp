@@ -114,12 +114,11 @@ class Graph{
 class PriorityQueue{
     public:
     class QueueElement{
-        private:
+        public:
         int id;
         double priority;
         QueueElement * next;
 
-        public:
         QueueElement(int id = 0, double priority = 0.0, QueueElement * next = nullptr):id(id), priority(priority), next(next){}
     }; // End of class queueElement
 
@@ -221,7 +220,7 @@ class PriorityQueue{
 
 
     int top(){ // Returns the top element of the queue
-        return id;
+        return head->id;
     }
 
     int size(){ // Returns the number of queue_elements
@@ -240,64 +239,71 @@ class PriorityQueue{
 }; // End PriorityQueue class
 
 class ShortestPath{
-    private:
-    Graph graph;
-    vector<int> dist;
-    vector<int> prev;
-
     public:
-    ShortestPath(){ // Default constructor
-        graph = new Graph();
+    ShortestPath(Graph graph, int u, int w):done(0), graph(graph), u(u), w(w){} // TODO: const en los argumentos tambien?
+
+    // vertices(list<int> list){ // List of vertices in G(V, E)
+
+    // }
+
+    list<int> path(){ // Find shortest path between u-w and returns the sequence of vertices representing shortest path u-v1-v2-...-vn-w
+        dijkstra(u, w);
+        list<int> res;
+        res.push_front(w);
+        while(w != u){
+            int w = prev[w];
+            res.push_front(w);
+        }
+        return res;
     }
 
-    ShortestPath(Graph graph){
-        this->graph = graph;
+    int path_size(){ // Returns the path cost associated with the shortest path
+        dijkstra(u, w);
+        return dist[w];
     }
 
-    vertices(list<int> list){ // List of vertices in G(V, E)
-
-    }
-
-    list<int> path(int u, int w){ // Find shortest path between u-w and returns the sequence of vertices representing shortest path u-v1-v2-...-vn-w
+    private:
+    int done;
+    Graph graph;
+    const int u, w;
+    vector<int> dist, prev;
+    void dijkstra(int u, int w){
+        if(done) return;
         dist[u] = 0;    // Initialization
-        PriorityQueue Q = new PriorityQueue();
+        PriorityQueue Q;
         for(int v = 0; v < graph.V(); v++){
-            if(i != u){
-                dist[v] = INFINITY; // Unknown distance from source to v
-                prev[v] = UNDEFINED;    // Predecesor of v
+            if(v != u){
+                dist[v] = -1;   // Unknown distance from source to v
+                prev[v] = -1;   // Predecesor of v
             }
             Q.insert(v, dist[v]);
         }
 
         while(Q.size() != 0){   // The main loop
-            u = Q.top();    // Return best vertex
-            Q.minPriority();    // Remove best vertex
+            u = Q.minPriority();    // Return best vertex and remove it
             vector<int> neighbors = graph.neighbors(u); // Only v that are still in Q
             for(int v = 0; v < neighbors.size(); v++){
                 int alt = dist[u] + graph.get_edge_value(u, v);
-                if(alt < dist[v]){
+                if(alt < dist[v] || dist[v] < 0){
                     dist[v] = alt;
                     prev[v] = u;
                     Q.chgPriority(v, alt);
                 }
             }
         }
-        return dist, prev;
-    }
-
-    int path_size(int u, int w){ // Returns the path cost associated with the shortest path
-
+        done = 1;
     }
 }; // End ShortestPath class
 
 int main(){
     Graph graph = Graph(randomMatrixGraph(50, 0.2, 1.0, 10.0));
-    Graph graph = Graph(randomMatrixGraph(50, 0.4, 1.0, 10.0));
-    for(int i = 0; i < graph.V(); i++){
+    ShortestPath sp = ShortestPath(graph, 0, 17);
+    cout << sp.path().front() << endl;
+    graph = Graph(randomMatrixGraph(50, 0.4, 1.0, 10.0));
+    /*for(int i = 0; i < graph.V(); i++){
         for(int j = 0; j < graph.V(); j++){
             cout << graph.get_edge_value(i, j) << endl;
         }
-    }
-
+    }*/
     return 0;
 }
