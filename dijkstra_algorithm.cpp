@@ -2,7 +2,6 @@
 #include <vector>
 #include <list>
 #include <algorithm>
-#include <queue>
 using namespace std;
 
 static int isUndirectedMatrix(vector<vector<double>> matrix){
@@ -127,29 +126,32 @@ class PriorityQueue{
     // Constructors
     PriorityQueue():head(nullptr), cursor(nullptr){} // Default constructor
     
-    // int getId(){ return cursor->id;}
-    // double getPriority(){ return cursos->priority;}
     void advance(){cursor = cursor->next;}
     
     void print(){
-        QueueElement * head = this->head;
+        QueueElement * temp = head;
         while(head != nullptr){
-            cout << /*head->id << ":" << */head->priority << "  ->  ";
-            head = head->next;
+            cout << /*temp->id << ":" << */temp->priority << "  ->  ";
+            temp = temp->next;
         }
         cout << "###" << endl;
     }
 
     void insert(int id, double priority){ // Insert queue_element into queue
+        // If head element has a worst priority
         if(head == nullptr || head->priority > priority){
+            // Link the new element with the head and update the head
             cursor = head = new QueueElement(id, priority, head);
         }
         else{
-            QueueElement * head = this->head;
-            while(head->next != nullptr && head->next->priority <= priority){
-                head = head->next;
+            QueueElement * temp = head;
+            // Search for the element that will precede the new element
+            while(temp->next != nullptr && temp->next->priority <= priority){
+                temp = temp->next;
             }
-            head->next = new QueueElement(id, priority, head->next);
+
+            // Link the element with the new element and link the new element with next element
+            temp->next = new QueueElement(id, priority, temp->next);
         }
     }
 
@@ -159,22 +161,40 @@ class PriorityQueue{
     //     }
     // }
 
-    // Updates the priority of a particular element and returns 1. If an element with the given id does not exists, nothing occurs and returns 0.
-    int chgPriority(int id, double priority){ // Changes the priority (node value) of queue element
-        if(head == nullptr) return 0;
-        if(head->id == id){
-            head->priority = priority;
-            return 1;
+    // Returns -1 if element does not exists, 0 if the deletes succesfully
+    int erase(int id){
+        QueueElement* temp = head;
+        QueueElement* prev = nullptr;
+
+        // If head element itself holds the id to be deleted
+        if(head != nullptr && head->id == id){
+            head = head->next; // Change head
+            delete temp;    // Deallocate
+            return 0;
         }
-        QueueElement * head = this->head;
-        while(head->next != nullptr && head->next->id != id){
-            head = head->next;
+
+        // Else search for the id to be deleted and keep track of the previous element
+        while(temp != nullptr && temp->id != id){
+            prev = temp;
+            temp = temp->next;
         }
-        if(head->next != nullptr){
-            head->next->priority = priority;
-            return 1;
-        }
+
+        // If element was not present
+        if(temp == nullptr) return -1;
+
+        // Unlink the element
+        prev->next = temp->next;
+
+        // Bring the memory to the heap
+        delete temp;
+
         return 0;
+    }
+
+    // Updates the priority of a particular element. Return 0 if successful, -1 if element does not exists.
+    int chgPriority(int id, double priority){ // Changes the priority (node value) of queue element
+        erase(id);
+        insert(id, priority);
     }
 
     int minPriority(){ // Removes and return the top element of the queue
@@ -191,10 +211,10 @@ class PriorityQueue{
     int contains(int id){ // Does the queue contain queue_element
         if(head == nullptr) return 0;
         if(head->id == id) return 1;
-        QueueElement * head = this->head;
-        while(head->next != nullptr){
-            head = head->next;
-            if(head->id == id) return 1;
+        QueueElement * temp = head;
+        while(temp->next != nullptr){
+            temp = temp->next;
+            if(temp->id == id) return 1;
         }
         return 0;
     }
@@ -206,10 +226,10 @@ class PriorityQueue{
 
     int size(){ // Returns the number of queue_elements
         int size = 0;
-        PriorityQueue * queue = this;
-        while(queue->next != nullptr){
+        QueueElement * temp = head;
+        while(temp != nullptr){
             size++;
-            queue = queue->next;
+            temp = temp->next;
         }
         return size;
     }
