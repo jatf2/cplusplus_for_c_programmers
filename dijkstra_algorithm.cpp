@@ -4,7 +4,7 @@
 #include <algorithm>
 using namespace std;
 
-static int isUndirectedMatrix(vector<vector<double>> matrix){
+static int isUndirectedMatrix(const vector<vector<double>> matrix){
     for(int i = 0; i < matrix.size(); i++){
         for(int j = 0; j < matrix.size(); j++){
             if(matrix[i][j] != matrix[j][i]){
@@ -15,7 +15,7 @@ static int isUndirectedMatrix(vector<vector<double>> matrix){
     return 1;
 }
 
-static vector<vector<double>> randomMatrixGraph(int graphSize, double edgeDensity, double minDistance, double maxDistance){
+static vector<vector<double>> randomMatrixGraph(const int graphSize, const double edgeDensity, const double minDistance, const double maxDistance){
     srand(time(nullptr));
     vector<vector<double>> matrix(graphSize, vector<double>(graphSize, -1)); // Construct a matrix with graphSize for a graph with no edges (-1)
     for(int i = 0; i < graphSize; i++){
@@ -61,14 +61,14 @@ class Graph{
         return res;
     }
 
-    int adjacent(int x, int y){ // Tests whether there is an edge from node x to node y
+    int adjacent(const int x, const int y){ // Tests whether there is an edge from node x to node y
         if(matrix[x][y] >= 0){
             return 1;
         }
         return 0;
     }
 
-    vector<int> neighbors(int x){ // Lists all nodes y such that there is an edge from x to y
+    vector<int> neighbors(const int x){ // Lists all nodes y such that there is an edge from x to y
         vector<int> res;
         for(int i = 0; i < matrix.size(); i++){
             if(adjacent(x, i)){
@@ -78,7 +78,7 @@ class Graph{
         return res;
     }
 
-    int add(int x, int y, int weight){ // Adds to the graph the edge from x to y, if it is not there
+    int add(const int x, const int y, const int weight){ // Adds to the graph the edge from x to y, if it is not there
         if(!adjacent(x, y)){
             matrix[x][y] = weight;
             return 1;
@@ -86,7 +86,7 @@ class Graph{
         return 0;
     }
 
-    int del(int x, int y){ // Removes the edge from x to y, if it is there
+    int del(const int x, const int y){ // Removes the edge from x to y, if it is there
         if(adjacent(x, y)){
             matrix[x][y] = -1;
             return 1;
@@ -102,11 +102,11 @@ class Graph{
         // TODO
     }
 
-    double get_edge_value(int x, int y){ // Returns the value associated to the edge (x, y)
+    double get_edge_value(const int x, const int y){ // Returns the value associated to the edge (x, y)
         return matrix[x][y];
     }
 
-    void set_edge_value(int x, int y, int v){ // Sets the value associated to the edge (x, y) to v
+    void set_edge_value(const int x, const int y, const int v){ // Sets the value associated to the edge (x, y) to v
         matrix[x][y] = v;
     }
 }; // End Graph class
@@ -136,16 +136,16 @@ class PriorityQueue{
         cout << "###" << endl;
     }
 
-    void insert(int id, double priority){ // Insert queue_element into queue
+    void insert(const int id, const double priority){ // Insert queue_element into queue
         // If head element has a worst priority
-        if(head == nullptr || head->priority > priority){
+        if(head == nullptr || (head->priority > priority && priority >= 0)){
             // Link the new element with the head and update the head
             cursor = head = new QueueElement(id, priority, head);
         }
         else{
             QueueElement * temp = head;
             // Search for the element that will precede the new element
-            while(temp->next != nullptr && temp->next->priority <= priority){
+            while(temp->next != nullptr && (temp->next->priority <= priority || priority < 0)){
                 temp = temp->next;
             }
 
@@ -161,7 +161,7 @@ class PriorityQueue{
     // }
 
     // Returns -1 if element does not exists, 0 if the deletes succesfully
-    int erase(int id){
+    int erase(const int id){
         QueueElement* temp = head;
         QueueElement* prev = nullptr;
 
@@ -191,7 +191,7 @@ class PriorityQueue{
     }
 
     // Updates the priority of a particular element. Return 0 if successful, -1 if element does not exists.
-    int chgPriority(int id, double priority){ // Changes the priority (node value) of queue element
+    int chgPriority(const int id, const double priority){ // Changes the priority (node value) of queue element
         erase(id);
         insert(id, priority);
     }
@@ -207,7 +207,7 @@ class PriorityQueue{
         return res;
     }
 
-    int contains(int id){ // Does the queue contain queue_element
+    int contains(const int id){ // Does the queue contain queue_element
         if(head == nullptr) return 0;
         if(head->id == id) return 1;
         QueueElement * temp = head;
@@ -249,10 +249,11 @@ class ShortestPath{
     list<int> path(){ // Find shortest path between u-w and returns the sequence of vertices representing shortest path u-v1-v2-...-vn-w
         dijkstra(u, w);
         list<int> res;
-        res.push_front(w);
-        while(w != u){
-            int w = prev[w];
-            res.push_front(w);
+        int aux = w;
+        res.push_front(aux);
+        while(aux != u){
+            aux = prev[aux];
+            res.push_front(aux);
         }
         return res;
     }
@@ -262,14 +263,23 @@ class ShortestPath{
         return dist[w];
     }
 
+    void print(){
+        list<int> path = this->path();
+        for(auto const& i: path){
+            cout << i << " - ";
+        }
+        cout << endl;
+    }
+
     private:
     int done;
     Graph graph;
     const int u, w;
-    vector<int> dist, prev;
+    vector<double> dist = vector<double>(graph.V());
+    vector<int> prev = vector<int>(graph.V());
     void dijkstra(int u, int w){
         if(done) return;
-        dist[u] = 0;    // Initialization
+        dist[u] = 0.0;    // Initialization
         PriorityQueue Q;
         for(int v = 0; v < graph.V(); v++){
             if(v != u){
@@ -282,8 +292,8 @@ class ShortestPath{
         while(Q.size() != 0){   // The main loop
             u = Q.minPriority();    // Return best vertex and remove it
             vector<int> neighbors = graph.neighbors(u); // Only v that are still in Q
-            for(int v = 0; v < neighbors.size(); v++){
-                int alt = dist[u] + graph.get_edge_value(u, v);
+            for(auto const& v: neighbors){
+                double alt = dist[u] + graph.get_edge_value(u, v);
                 if(alt < dist[v] || dist[v] < 0){
                     dist[v] = alt;
                     prev[v] = u;
@@ -296,14 +306,15 @@ class ShortestPath{
 }; // End ShortestPath class
 
 int main(){
-    Graph graph = Graph(randomMatrixGraph(50, 0.2, 1.0, 10.0));
-    ShortestPath sp = ShortestPath(graph, 0, 17);
-    cout << sp.path().front() << endl;
-    graph = Graph(randomMatrixGraph(50, 0.4, 1.0, 10.0));
-    /*for(int i = 0; i < graph.V(); i++){
+    // Graph graph = Graph(randomMatrixGraph(50, 0.2, 1.0, 10.0));
+    Graph graph = Graph(randomMatrixGraph(3, 1, 1.0, 10.0));
+    ShortestPath sp = ShortestPath(graph, 0, 1);
+    for(int i = 0; i < graph.V(); i++){
         for(int j = 0; j < graph.V(); j++){
-            cout << graph.get_edge_value(i, j) << endl;
+            if(i != j) cout << graph.get_edge_value(i, j) << endl;
         }
-    }*/
+    }
+    sp.print();
+    graph = Graph(randomMatrixGraph(50, 0.4, 1.0, 10.0));
     return 0;
 }
