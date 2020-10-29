@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <list>
-#include <algorithm>
+#include <limits>
 using namespace std;
 
 static int isUndirectedMatrix(const vector<vector<double>> matrix){
@@ -103,6 +103,7 @@ class Graph{
     }
 
     double get_edge_value(const int x, const int y){ // Returns the value associated to the edge (x, y)
+        if(matrix[x][y] < 0){ cout << "Aborting..." << endl; abort();}
         return matrix[x][y];
     }
 
@@ -247,7 +248,7 @@ class ShortestPath{
     // }
 
     list<int> path(){ // Find shortest path between u-w and returns the sequence of vertices representing shortest path u-v1-v2-...-vn-w
-        dijkstra(u, w);
+        dijkstra(u);
         list<int> res;
         int aux = w;
         res.push_front(aux);
@@ -258,17 +259,19 @@ class ShortestPath{
         return res;
     }
 
-    int path_size(){ // Returns the path cost associated with the shortest path
-        dijkstra(u, w);
+    double path_size(){ // Returns the path cost associated with the shortest path
+        dijkstra(u);
         return dist[w];
     }
 
     void print(){
         list<int> path = this->path();
-        for(auto const& i: path){
-            cout << i << " - ";
+        for (auto it = path.cbegin(); it != path.cend(); it++){
+            cout << *it;
+            if(it != std::prev(path.end())) cout << " -> ";
         }
-        cout << endl;
+
+        cout << "\t\t" << path_size() << endl;
     }
 
     private:
@@ -277,13 +280,15 @@ class ShortestPath{
     const int u, w;
     vector<double> dist = vector<double>(graph.V());
     vector<int> prev = vector<int>(graph.V());
-    void dijkstra(int u, int w){
+
+    void dijkstra(int inicio){
         if(done) return;
+        int u = inicio;
         dist[u] = 0.0;    // Initialization
         PriorityQueue Q;
         for(int v = 0; v < graph.V(); v++){
             if(v != u){
-                dist[v] = -1;   // Unknown distance from source to v
+                dist[v] = numeric_limits<double>::max();   // Unknown distance from source to v
                 prev[v] = -1;   // Predecesor of v
             }
             Q.insert(v, dist[v]);
@@ -294,7 +299,7 @@ class ShortestPath{
             vector<int> neighbors = graph.neighbors(u); // Only v that are still in Q
             for(auto const& v: neighbors){
                 double alt = dist[u] + graph.get_edge_value(u, v);
-                if(alt < dist[v] || dist[v] < 0){
+                if(alt < dist[v]){
                     dist[v] = alt;
                     prev[v] = u;
                     Q.chgPriority(v, alt);
@@ -306,15 +311,22 @@ class ShortestPath{
 }; // End ShortestPath class
 
 int main(){
-    // Graph graph = Graph(randomMatrixGraph(50, 0.2, 1.0, 10.0));
-    Graph graph = Graph(randomMatrixGraph(3, 1, 1.0, 10.0));
-    ShortestPath sp = ShortestPath(graph, 0, 1);
-    for(int i = 0; i < graph.V(); i++){
-        for(int j = 0; j < graph.V(); j++){
-            if(i != j) cout << graph.get_edge_value(i, j) << endl;
-        }
+    Graph graph = Graph(randomMatrixGraph(50, 0.2, 1.0, 10.0));
+    double avg = 0.0;
+    for(int i = 1; i < 50; i++){
+        ShortestPath sp = ShortestPath(graph, 0, i);
+        // sp.print();
+        avg += sp.path_size();
     }
-    sp.print();
+    cout << "Average with density of 20%: " << avg/49 << endl;
+
     graph = Graph(randomMatrixGraph(50, 0.4, 1.0, 10.0));
+    avg = 0.0;
+    for(int i = 1; i < 50; i++){
+        ShortestPath sp = ShortestPath(graph, 0, i);
+        // sp.print();
+        avg += sp.path_size();
+    }
+    cout << "Average with density of 40%: " << avg/49 << endl;
     return 0;
 }
