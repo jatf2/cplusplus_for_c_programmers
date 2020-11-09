@@ -1,7 +1,13 @@
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <vector>
 #include <list>
+#include <set>
 #include <limits>
+#include <iterator>
+#include <algorithm>
+// #include <string>
 using namespace std;
 
 static int isUndirectedMatrix(const vector<vector<double>> matrix){
@@ -28,6 +34,41 @@ static vector<vector<double>> randomMatrixGraph(const int graphSize, const doubl
     return matrix;
 }
 
+class Edge{
+    private:
+    int a, b;
+    double weight;
+
+    public:
+    Edge(int a, int b, double weight):a(a), b(b), weight(weight){}
+
+    int getA(){
+        return a;
+    }
+
+    int getB(){
+        return b;
+    }
+
+    double getWeight(){
+        return weight;
+    }
+
+    void print(){
+        cout << a << " -> " << b << " (" << weight << ")" << endl;
+    }
+
+    bool operator<(const Edge& right) const{
+        if(weight == right.weight){
+            if(a == right.a){
+                return b < right.b;
+            }
+            return a < right.a;
+        }
+        return weight < right.weight;
+    }
+}; // End of class Edge
+
 // The representation selected is a matrix which values indicates the weight of the edge. A negative value indicates there is no edge.
 class Graph{
     private:
@@ -45,6 +86,35 @@ class Graph{
         else{
             cout << "Error: graph is not undirected" << endl;
         }
+    }
+
+    Graph(string filePath){
+        // Create a text string, which is used to output the text file
+        string line;
+        int size = -1;
+
+        // Read from the text file
+        ifstream myFile(filePath);
+
+        // The first line is the node size of the graph
+        if(myFile.is_open()){
+            // Use a while loop together with the C++ 11 getline() function to read the file line by line
+            while(getline(myFile, line)){
+                if(size == -1){
+                    size = stoi(line);
+                    vector<vector<double>> matrix(stoi(line), vector<double>(stoi(line), -1));
+                    this->matrix = matrix;
+                }
+                else{
+                    istringstream iss(line);
+                    vector<string> splitted{istream_iterator<string>{iss}, istream_iterator<string>{}};
+                    matrix[stoi(splitted[0])][stoi(splitted[1])] = stod(splitted[2]);
+                }
+            }
+        }
+
+        // Close the file
+        myFile.close(); 
     }
 
     int V(){ // Returns the number of vertices in the graph
@@ -80,7 +150,7 @@ class Graph{
 
     int add(const int x, const int y, const int weight){ // Adds to the graph the edge from x to y, if it is not there
         if(!adjacent(x, y)){
-            matrix[x][y] = weight;
+            matrix[x][y] = matrix[y][x] = weight;
             return 1;
         }
         return 0;
@@ -96,6 +166,7 @@ class Graph{
 
     int get_node_value(int x){ // Returns the value associated with the node x
         // TODO
+        return 0;
     }
 
     void set_node_value(int x, int a){ // Sets the value associated with the node x to a
@@ -109,6 +180,29 @@ class Graph{
 
     void set_edge_value(const int x, const int y, const int v){ // Sets the value associated to the edge (x, y) to v
         matrix[x][y] = v;
+    }
+
+    void print(){
+        for(int i = 0; i < matrix.size(); ++i){
+            for(int j = i; j < matrix.size(); ++j){
+                if(matrix[i][j] != -1){
+                    cout << i << " -> " << j << " (" << matrix[i][j] << ")" << endl;
+                }
+            }
+        }
+    }
+
+    list<Edge> listOfEdges(){
+        list<Edge> res = list<Edge>();
+        for(int i = 0; i < matrix.size(); ++i){
+            for(int j = i; j < matrix.size(); ++j){
+                if(matrix[i][j] != -1){
+                    res.push_back(Edge(i, j, matrix[i][j]));
+                }
+            }
+        }
+        res.sort();
+        return res;
     }
 }; // End Graph class
 
@@ -193,8 +287,11 @@ class PriorityQueue{
 
     // Updates the priority of a particular element. Return 0 if successful, -1 if element does not exists.
     int chgPriority(const int id, const double priority){ // Changes the priority (node value) of queue element
-        erase(id);
+        if(erase(id)){
+            return -1;
+        }
         insert(id, priority);
+        return 0;
     }
 
     int minPriority(){ // Removes and return the top element of the queue
@@ -310,7 +407,65 @@ class ShortestPath{
     }
 }; // End ShortestPath class
 
-int main(){
+set<int> findSet(set<set<int>> setOfSets, int val){
+    for(set<set<int>>::iterator it = setOfSets.begin(); it != setOfSets.end(); ++it){
+        set<int> s = *it;
+        if(s.find(val) != s.end()) return s;
+    }
+    return *setOfSets.end();
+}
+
+class MST{
+    private:
+    int done;
+    Graph inputGraph;
+    Graph mst;
+    double cost;
+
+    public:
+    MST(Graph graph):done(0), inputGraph(graph), mst(Graph(vector<vector<double>>(graph.V(), vector<double>(graph.V(), -1)))), cost(0.){}
+
+    Graph kruskal(){
+        // vector<int> vertexSet;
+        list<Edge> sortedEgdeList = inputGraph.listOfEdges();
+
+        // At the beginning each set has a different node
+        set<set<int>> setOfSets;
+        for(int i = 0; i < inputGraph.V(); ++i){
+            int myints[] = {i};
+            setOfSets.insert(set<int>(myints, myints + 1));
+        }
+
+        for(Edge edge: sortedEgdeList){
+            set<int> sa, sb;
+            sa = findSet(setOfSets, edge.getA());
+            sb = findSet(setOfSets, edge.getB());
+            if(sa != *setOfSets.end() && sb != *setOfSets.end() &&
+                sa != sb){
+                // Add the edge to the forest and accumulate the cost
+                mst.add(edge.getA(), edge.getB(), edge.getWeight());
+                cost += edge.getWeight();
+
+                // 
+                set<int> join;
+                insert_iterator<set<int>> res_ins(join, join.begin());
+                set_union(sa.begin(), sa.end(), sb.begin(), sb.end(), res_ins);
+                setOfSets.erase(sa);
+                setOfSets.erase(sb);
+                setOfSets.insert(join);
+            }
+        }
+
+        return mst;
+    }
+
+    void print(){
+        cout << "MST with cost: " << cost << endl;
+        mst.print();
+    }
+}; // End MST class
+
+void assigment2(){
     Graph graph = Graph(randomMatrixGraph(50, 0.2, 1.0, 10.0));
     double avg = 0.0;
     for(int i = 1; i < 50; i++){
@@ -328,5 +483,19 @@ int main(){
         avg += sp.path_size();
     }
     cout << "Average with density of 40%: " << avg/49 << endl;
+}
+
+void assigment3(){
+    cout << "Path to graph file? [cplusplus4c_homeworks_Homework3_SampleTestData_mst_data]" << endl;
+    string path;
+    cin >> path;
+    MST a = MST(Graph(path));
+    Graph mst = a.kruskal();
+    a.print();
+}
+
+int main(){
+    // assigment2();   
+    assigment3();   
     return 0;
 }
